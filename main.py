@@ -47,7 +47,6 @@ class MyWindow(QMainWindow, Ui_MainWindow):
     def t_open_file(self, file):
         data = xlrd.open_workbook(file)
         table = data.sheet_by_index(0)
-        cookies_list = []
         for rowNum in range(table.nrows):
             rowVale = table.row_values(rowNum)
             self.widget.signal_cookies_opened.emit(table.nrows, rowNum, rowVale[1])
