@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>937</width>
-    <height>844</height>
+    <width>1061</width>
+    <height>850</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -186,11 +186,43 @@
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout_8">
             <item>
+             <layout class="QVBoxLayout" name="verticalLayout_7">
+              <item>
+               <widget class="QPushButton" name="pushButton_7">
+                <property name="text">
+                 <string>测试登录</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButton_4">
+                <property name="text">
+                 <string>开始</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButton_5">
+                <property name="text">
+                 <string>停止</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="Line" name="line_7">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+             </widget>
+            </item>
+            <item>
              <widget class="QGroupBox" name="groupBox_2">
               <property name="title">
                <string>商品设置</string>
               </property>
-              <layout class="QHBoxLayout" name="horizontalLayout_10">
+              <layout class="QHBoxLayout" name="horizontalLayout_9">
                <item>
                 <layout class="QVBoxLayout" name="verticalLayout">
                  <item>
@@ -296,8 +328,15 @@
                        <day>19</day>
                       </date>
                      </property>
+                     <property name="time">
+                      <time>
+                       <hour>12</hour>
+                       <minute>0</minute>
+                       <second>0</second>
+                      </time>
+                     </property>
                      <property name="displayFormat">
-                      <string>yyyy/M/d APh:mm:ss</string>
+                      <string>yyyy-MM-dd hh:mm:ss</string>
                      </property>
                     </widget>
                    </item>
@@ -312,6 +351,13 @@
              <widget class="Line" name="line_6">
               <property name="orientation">
                <enum>Qt::Vertical</enum>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButton_6">
+              <property name="text">
+               <string>保存配置</string>
               </property>
              </widget>
             </item>
@@ -358,7 +404,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>937</width>
+     <width>1061</width>
      <height>24</height>
     </rect>
    </property>
