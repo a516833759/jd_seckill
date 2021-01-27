@@ -1,7 +1,6 @@
 import sys
 import os
 import xlrd
-
 from PyQt5.QtCore import pyqtSignal, QDateTime
 from PyQt5.QtWidgets import *
 from jd_main_ui import *
@@ -14,6 +13,7 @@ import json
 import queue
 import platform
 from utils.util import Register
+import requests
 
 
 
@@ -42,9 +42,9 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         self.pushButton_6.clicked.connect(self.save_config)
         self.pushButton_7.clicked.connect(self.test_login)
         self.pushButton_5.clicked.connect(self.stop)
-        self.pushButton.setEnabled(False)
         self.pushButton_2.setEnabled(False)
-        self.pushButton_3.setEnabled(False)
+        self.pushButton_3.clicked.connect(self.download)
+        self.pushButton.clicked.connect(self.download_ck)
         self.load_config()
         self.queue = queue.Queue(maxsize=100)
         self.action.triggered.connect(self.show_register)
@@ -52,6 +52,27 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         if self.system != 'Darwin':
             self.device = Register()
             self.register(init=True)
+
+    def download(self):
+        url = 'https://lijia-dev-public.oss-cn-beijing.aliyuncs.com/0/cookies.xls'
+        file_content = requests.get(url).content
+        filename = QFileDialog.getSaveFileName(self,'保存文件','cookies.xls')
+        if not filename[0]:
+            return
+        with open(filename[0],'wb+') as f:
+            f.write(file_content)
+        QMessageBox.about(self, '提示', '下载成功')
+
+    def download_ck(self):
+        url = 'https://lijia-dev-public.oss-cn-beijing.aliyuncs.com/0/%E4%BA%AC%E4%B8%9Cck%E6%8F%90%E5%8F%96.zip'
+        file_content = requests.get(url).content
+        filename = QFileDialog.getSaveFileName(self,'保存文件','京东ck提取.zip')
+        if not filename[0]:
+            return
+        with open(filename[0],'wb+') as f:
+            f.write(file_content)
+        QMessageBox.about(self, '提示', '下载成功')
+
 
     def show_register(self):
         key = self.device.get_device_info()
