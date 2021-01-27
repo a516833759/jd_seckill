@@ -48,9 +48,9 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         self.load_config()
         self.queue = queue.Queue(maxsize=100)
         self.action.triggered.connect(self.show_register)
-        self.device = Register()
         self.system = platform.system()
         if self.system != 'Darwin':
+            self.device = Register()
             self.register(init=True)
 
     def show_register(self):
