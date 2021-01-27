@@ -3,15 +3,18 @@ import os
 import xlrd
 
 from PyQt5.QtCore import pyqtSignal, QDateTime
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QTableWidgetItem, QMessageBox
+from PyQt5.QtWidgets import *
 from jd_main_ui import *
+from register import *
 import threading
 from jd_logger import logger
 from utils.util import Dict
 from jd_spider_requests import JdSeckill
 import json
 import queue
-import time
+import platform
+from utils.util import Register
+
 
 
 
@@ -44,7 +47,63 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         self.pushButton_3.setEnabled(False)
         self.load_config()
         self.queue = queue.Queue(maxsize=100)
+        self.action.triggered.connect(self.show_register)
+        self.device = Register()
+        self.system = platform.system()
+        if self.system != 'Darwin':
+            self.register(init=True)
 
+    def show_register(self):
+        key = self.device.get_device_info()
+        self.di = QDialog()
+        self.d = Ui_Dialog()
+        self.d.setupUi(self.di)
+        self.di.show()
+        self.d.lineEdit.setText(key)
+        self.d.buttonBox.clicked.connect(self.register)
+
+    def register(self,init=False):
+        if self.system == 'Darwin':
+            self.enabled()
+            return
+        if init == True:
+            if not os.path.exists('./%s' % self.device.get_device_info()):
+                self.disabled()
+                return
+            else:
+                key = self.device.get_device_info()
+                with open('./%s' % key,mode='r') as f:
+                    secret = f.read()
+                status = self.device.register(key, secret)
+                if not status:
+                    self.disabled()
+                else:
+                    self.enabled()
+        else:
+            key = self.d.lineEdit.text()
+            secret = self.d.lineEdit_2.text()
+            status = self.device.register(key,secret)
+            if not status:
+                self.disabled()
+            else:
+                self.enabled()
+                QMessageBox.about(self, '提示', '激活成功')
+    def disabled(self):
+        self.pushButton.setEnabled(False)
+        self.pushButton_2.setEnabled(False)
+        self.pushButton_3.setEnabled(False)
+        self.pushButton_4.setEnabled(False)
+        self.pushButton_5.setEnabled(False)
+        self.pushButton_6.setEnabled(False)
+        self.pushButton_7.setEnabled(False)
+    def enabled(self):
+        self.pushButton.setEnabled(True)
+        self.pushButton_2.setEnabled(True)
+        self.pushButton_3.setEnabled(True)
+        self.pushButton_4.setEnabled(True)
+        self.pushButton_5.setEnabled(True)
+        self.pushButton_6.setEnabled(True)
+        self.pushButton_7.setEnabled(True)
     def open_file(self):
         fileName, fileType = QtWidgets.QFileDialog.getOpenFileName(self, "选取文件", os.getcwd(),
                                                                    "xls Files(*.xls)")
@@ -58,7 +117,6 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         table = data.sheet_by_index(0)
         for rowNum in range(table.nrows):
             rowVale = table.row_values(rowNum)
-            print(rowVale)
             self.widget.signal_cookies_opened.emit(table.nrows, rowNum, 2, rowVale[1])
             self.widget.signal_cookies_opened.emit(table.nrows, rowNum, 0, str(int(rowVale[0])))
 
@@ -80,7 +138,6 @@ class MyWindow(QMainWindow, Ui_MainWindow):
             s = f.read()
             if s:
                 conf = Dict(json.loads(s))
-                print(conf)
                 self.spinBox.setValue(int(conf.thread_num))
                 self.lineEdit.setText(conf.sku)
                 self.spinBox_2.setValue(int(conf.sku_num))
@@ -110,17 +167,12 @@ class MyWindow(QMainWindow, Ui_MainWindow):
 
     def update_widget(self, cookies, data, column):
         # column 指定更新哪列
-        print(cookies, data, column)
         s = self.tableWidget.findItems(cookies, QtCore.Qt.MatchExactly)
         for i in s:
             item = QTableWidgetItem(data)
             self.tableWidget.setItem(i.row(), column, item)
 
     def start(self):
-        # self.conf = self._get_config()
-        # cookies_list = self.get_cookies()
-        # self.update_widget('17303419993', '111', 3)
-
         cookies_list = self.get_cookies()
         if len(cookies_list) == 0:
             QMessageBox.about(self, '提示', '请导入cookies数据')
@@ -137,7 +189,6 @@ class MyWindow(QMainWindow, Ui_MainWindow):
             # jd_seckill.seckill_by_proc_pool(work_count=conf.thread_num)
             # thread.start()
 
-
     def skill(self, cookies, conf, widget):
         jd_seckill = JdSeckill(conf.sku, conf.sku_num, conf.buy_time, cookies, widget)
         jd_seckill.seckill_by_proc_pool(work_count=conf.thread_num)
@@ -151,7 +202,6 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         cookies_list = self.get_cookies()
         conf = self._get_config()
         for cookies in cookies_list:
-            print('cookies',cookies)
             jd_seckill = JdSeckill(conf.sku, conf.sku_num, conf.buy_time, cookies, self.widget)
             jd_seckill.get_username()
 
@@ -166,12 +216,6 @@ class MyWindow(QMainWindow, Ui_MainWindow):
             except Exception as e:
                 logger.error(e)
                 break
-
-
-
-class Skill:
-    def __init__(self, parent=None):
-        super(Skill, self).__init__(parent)
 
 
 if __name__ == '__main__':

@@ -5,12 +5,11 @@ import zmail
 from jd_logger import logger
 import threading
 import platform
+import hashlib
 
 system = platform.system()
 if system != 'Darwin':
     import wmi
-
-
 
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36",
@@ -143,20 +142,28 @@ def send_email(message):
 
 class Register:
     def __init__(self):
-        self._get_device_info()
+        self.key = self.get_device_info()
 
-    def _get_device_info(self):
+    def get_device_info(self):
         c = wmi.WMI()
-        for physical_disk in c.Win32_DiskDrive():
-            print(physical_disk.SerialNumber)
+        serial_number = c.Win32_DiskDrive()[0].SerialNumber if c.Win32_DiskDrive() else None
+        if not serial_number:
+            return
+        key = hashlib.md5(serial_number.encode(encoding='UTF-8')).hexdigest()
+        return key
 
-    def register(self):
-        pass
-
-    def _make_secret(self):
-        pass
+    def register(self, key,secret):
+        md5 = hashlib.md5('6a9a5ba51e2d014bd678f866ee467fd6'.encode(encoding='UTF-8'))
+        md5.update(self.key.encode(encoding='UTF-8'))
+        local_secret = md5.hexdigest()
+        if secret == local_secret:
+            with open('./%s' % key,mode='w') as f:
+                f.write(secret)
+            return True
+        return False
 
 
 if __name__ == '__main__':
-    # register = Register()
-    print(platform.system())
+    register = Register()
+    register.register('111')
+    # print(platform.system())

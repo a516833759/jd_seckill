@@ -405,11 +405,23 @@
      <x>0</x>
      <y>0</y>
      <width>1061</width>
-     <height>24</height>
+     <height>26</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menu">
+    <property name="title">
+     <string>菜单</string>
+    </property>
+    <addaction name="action"/>
+   </widget>
+   <addaction name="menu"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <action name="action">
+   <property name="text">
+    <string>注册</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections/>
