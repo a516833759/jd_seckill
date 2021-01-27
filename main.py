@@ -3,55 +3,21 @@ import os
 import xlrd
 
 from PyQt5.QtCore import pyqtSignal, QDateTime
-from PyQt5.QtGui import QStandardItemModel, QStandardItem
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QTableWidgetItem, QMessageBox
 from jd_main_ui import *
-from threading import Thread
+import threading
 from jd_logger import logger
 from utils.util import Dict
 from jd_spider_requests import JdSeckill
 import json
-import time
 import queue
-import ctypes
-import inspect
-import asyncio
-
-def _async_raise(tid, exctype):
-    """raises the exception, performs cleanup if needed"""
-    try:
-        tid = ctypes.c_long(tid)
-        if not inspect.isclass(exctype):
-            exctype = type(exctype)
-        res = ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, ctypes.py_object(exctype))
-        if res == 0:
-            # pass
-            raise ValueError("invalid thread id")
-        elif res != 1:
-            # """if it returns a number greater than one, you're in trouble,
-            # and you should call it again with exc=NULL to revert the effect"""
-            ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, None)
-            raise SystemError("PyThreadState_SetAsyncExc failed")
-    except Exception as err:
-        print(err)
+import time
 
 
-def stop_thread(thread):
-    """终止线程"""
-    _async_raise(thread.ident, SystemExit)
+
+
 
 class MyWidget(QWidget):
-    # 无参数的信号
-    # Signal_NoParameters = pyqtSignal()
-    # # 带一个参数(整数)的信号
-    # Signal_OneParameter = pyqtSignal(int)
-    # # 带一个参数(整数或者字符串)的重载版本的信号
-    # Signal_OneParameter_Overload = pyqtSignal([int], [str])
-    # # 带两个参数(整数,字符串)的信号
-    # Signal_TwoParameters = pyqtSignal(int, str)
-    # # 带两个参数([整数,整数]或者[整数,字符串])的重载版本的信号
-    # Signal_TwoParameters_Overload = pyqtSignal([int, int], [int, str])
-    # 打开cookies文件后读取文件传输信号
     signal_add_log = pyqtSignal(str, str, int)
     signal_cookies_opened = pyqtSignal(int, int, int, str)
     signal_login = pyqtSignal(str, str, int)
@@ -65,14 +31,17 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         self.widget.signal_cookies_opened.connect(self.show_ui_cookies)
         self.widget.signal_login.connect(self.update_widget)
         self.widget.signal_add_log.connect(self.update_widget)
-        self.tableWidget.setColumnCount(8)
-        self.tableWidget.setHorizontalHeaderLabels(['id', '用户', 'cookies', '登录状态', '订单号', '商品', '下单状态', '日志'])
+        self.tableWidget.setColumnCount(9)
+        self.tableWidget.setHorizontalHeaderLabels(['id', '用户', 'cookies', '登录状态', '订单号', '商品', '下单状态', '日志','错误码'])
         self.tableWidget.setColumnWidth(7,300)
         self.toolButton.clicked.connect(self.open_file)
         self.pushButton_4.clicked.connect(self.start)
         self.pushButton_6.clicked.connect(self.save_config)
         self.pushButton_7.clicked.connect(self.test_login)
         self.pushButton_5.clicked.connect(self.stop)
+        self.pushButton.setEnabled(False)
+        self.pushButton_2.setEnabled(False)
+        self.pushButton_3.setEnabled(False)
         self.load_config()
         self.queue = queue.Queue(maxsize=100)
 
@@ -81,7 +50,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
                                                                    "xls Files(*.xls)")
         if not fileName:
             return
-        thread = Thread(target=self.t_open_file, args=(fileName,))
+        thread = threading.Thread(target=self.t_open_file, args=(fileName,))
         thread.start()
 
     def t_open_file(self, file):
@@ -149,12 +118,22 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         # self.conf = self._get_config()
         # cookies_list = self.get_cookies()
         # self.update_widget('17303419993', '111', 3)
+
         cookies_list = self.get_cookies()
+        if len(cookies_list) == 0:
+            QMessageBox.about(self, '提示', '请导入cookies数据')
+            return
+        self.pushButton_4.setEnabled(False)
+        self.pushButton_5.setEnabled(True)
         conf = self._get_config()
         for cookies in cookies_list:
-            thread = Thread(target=self.skill, args=(cookies, conf, self.widget))
+            # thread = threading.Thread(target=self.skill, args=(cookies, conf, self.widget))
+            thread = JdSeckill(conf.sku, conf.sku_num, conf.buy_time, cookies, self.widget)
             self.queue.put(thread)
             thread.start()
+
+            # jd_seckill.seckill_by_proc_pool(work_count=conf.thread_num)
+            # thread.start()
 
 
     def skill(self, cookies, conf, widget):
@@ -162,7 +141,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         jd_seckill.seckill_by_proc_pool(work_count=conf.thread_num)
 
     def test_login(self):
-        thread = Thread(target=self.t_test_login)
+        thread = threading.Thread(target=self.t_test_login)
         thread.start()
 
 
@@ -170,16 +149,18 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         cookies_list = self.get_cookies()
         conf = self._get_config()
         for cookies in cookies_list:
+            print('cookies',cookies)
             jd_seckill = JdSeckill(conf.sku, conf.sku_num, conf.buy_time, cookies, self.widget)
             jd_seckill.get_username()
 
     def stop(self):
+        self.pushButton_4.setEnabled(True)
+        self.pushButton_5.setEnabled(False)
         while True:
             try:
-                thread = self.queue.get(timeout=0.5)
+                thread = self.queue.get(timeout=0.1)
                 if thread.isAlive():
-                    stop_thread(thread)
-
+                    thread.stop()
             except Exception as e:
                 logger.error(e)
                 break

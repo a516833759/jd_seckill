@@ -5,7 +5,7 @@ import zmail
 from jd_logger import logger
 import sys
 import time
-# from config import global_config
+import threading
 
 
 
@@ -53,6 +53,30 @@ USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/537.14 (KHTML, like Gecko) Chrome/24.0.1292.0 Safari/537.14"
 ]
 
+class Job(threading.Thread):
+
+    def __init__(self, *args, **kwargs):
+        super(Job, self).__init__(*args, **kwargs)
+        self.__flag = threading.Event()   # 用于暂停线程的标识
+        self.__flag.set()    # 设置为True
+        self.__running = threading.Event()   # 用于停止线程的标识
+        self.__running.set()   # 将running设置为True
+
+    # def run(self):
+    #     while self.__running.isSet():
+    #         self.__flag.wait()   # 为True时立即返回, 为False时阻塞直到内部的标识位为True后返回
+
+    def pause(self):
+        self.__flag.clear()   # 设置为False, 让线程阻塞
+
+    def resume(self):
+        self.__flag.set()  # 设置为True, 让线程停止阻塞
+
+    def stop(self):
+        self.__flag.set()    # 将线程从暂停状态恢复, 如何已经暂停的话
+        self.__running.clear()    # 设置为False
+
+
 class Dict(dict):
 
     def __getattr__(self, key):
@@ -63,10 +87,13 @@ class Dict(dict):
         
 
 def parse_json(s):
-    print(s)
-    begin = s.find('{')
-    end = s.rfind('}') + 1
-    return json.loads(s[begin:end])
+    try:
+        begin = s.find('{')
+        end = s.rfind('}') + 1
+        return json.loads(s[begin:end])
+    except Exception as e:
+        logger.error(e)
+        return
 
 
 def get_random_useragent():

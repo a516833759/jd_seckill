@@ -5,15 +5,21 @@ from jd_logger import logger
 from timer import Timer
 import requests
 from utils.util import parse_json, get_session, send_email, USER_AGENTS
-# from config import global_config
-from concurrent.futures import ProcessPoolExecutor
+# from concurrent.futures import ProcessPoolExecutor
 from lxml import etree
 import threadpool
+import threading
 
 
-class JdSeckill(object):
-    def __init__(self, sku, sku_num, buy_time, cookies, widget):
+class JdSeckill(threading.Thread):
+    def __init__(self, sku, sku_num, buy_time, cookies, widget,*args, **kwargs):
         # 初始化信息
+        super(JdSeckill, self).__init__(*args, **kwargs)
+        self.__flag = threading.Event()   # 用于暂停线程的标识
+        self.__flag.set()    # 设置为True
+        self.__running = threading.Event()   # 用于停止线程的标识
+        self.__running.set()   # 将running设置为True
+
         self.session = get_session(cookies)
         self.sku_id = sku
         self.seckill_num = sku_num
@@ -24,6 +30,16 @@ class JdSeckill(object):
         self.buy_time = buy_time
         self.widget = widget
         self.cookies = cookies
+
+    def pause(self):
+        self.__flag.clear()   # 设置为False, 让线程阻塞
+
+    def resume(self):
+        self.__flag.set()  # 设置为True, 让线程停止阻塞
+
+    def stop(self):
+        self.__flag.set()    # 将线程从暂停状态恢复, 如何已经暂停的话
+        self.__running.clear()    # 设置为False
 
     def reserve(self):
         """
@@ -38,7 +54,7 @@ class JdSeckill(object):
         self.__seckill()
 
     def wati_some_time(self):
-        time.sleep(random.randint(5000, 8000)/10000)
+        time.sleep(random.randint(5000, 8000) / 10000)
 
     def get_sku_title(self):
         """获取商品名称"""
@@ -48,7 +64,7 @@ class JdSeckill(object):
         sku_title = x_data.xpath('/html/head/title/text()')
         return sku_title[0]
 
-    def seckill_by_proc_pool(self, work_count=5):
+    def run(self, work_count=5):
         """
         多进程进行抢购
         work_count：进程数量
@@ -66,19 +82,18 @@ class JdSeckill(object):
         预约
         """
         self.login()
-        while True:
-            try:
-                self.make_reserve()
-            except Exception as e:
-                logger.info('预约发生异常!', e)
-            self.wati_some_time()
+        try:
+            self.make_reserve()
+        except Exception as e:
+            logger.info('预约发生异常!', e)
 
     def __seckill(self):
         """
         抢购
         """
         self.login()
-        while True:
+        while self.__running.isSet():
+            self.__flag.wait()
             try:
                 self.request_seckill_url()
                 self.request_seckill_checkout_page()
@@ -135,7 +150,8 @@ class JdSeckill(object):
         reserve_url = resp_json.get('url')
         self.timers = Timer(self.buy_time)
         self.timers.start()
-        while True:
+        while self.__running.isSet():
+            self.__flag.wait()
             try:
                 self.session.get(url='https:' + reserve_url)
                 logger.info('预约成功，已获得抢购资格 / 您已成功预约过了，无需重复预约')
@@ -174,6 +190,8 @@ class JdSeckill(object):
             logger.error('未获取返回数据')
             self.push_log('未获取返回数据')
             return
+
+        logger.info('测试登录返回resp.text', parse_json(resp.text))
         nick_name = parse_json(resp.text).get('nickName')
         if not nick_name:
             self.widget.signal_login.emit(self.cookies, '登录失败', 3)
@@ -201,7 +219,8 @@ class JdSeckill(object):
             'Host': 'itemko.jd.com',
             'Referer': 'https://item.jd.com/{}.html'.format(self.sku_id),
         }
-        while True:
+        while self.__running.isSet():
+            self.__flag.wait()
             resp = self.session.get(url=url, headers=headers, params=payload)
             print('resp', resp.text)
             if not resp.text:
@@ -215,10 +234,14 @@ class JdSeckill(object):
                 seckill_url = router_url.replace(
                     'divide', 'marathon').replace(
                     'user_routing', 'captcha.html')
-                msg = "抢购链接获取成功: %s", seckill_url
-                logger.info(msg)
-                self.push_log(msg)
-                return seckill_url
+                if seckill_url:
+                    msg = "抢购链接获取成功: %s", seckill_url
+                    logger.info(msg)
+                    self.push_log(msg)
+                    return seckill_url
+                else:
+                    msg = "抢购链接获取失败"
+                    return
             else:
                 logger.info("抢购链接获取失败，稍后自动重试")
                 self.push_log("抢购链接获取失败，稍后自动重试")
@@ -226,8 +249,16 @@ class JdSeckill(object):
 
     def push_log(self, msg):
         current_time = time.strftime("%H:%M:%S", time.localtime())
-        msg = '%s--%s' % (current_time,msg)
+        msg = '%s--%s' % (current_time, msg)
         self.widget.signal_add_log.emit(self.cookies, msg, 7)
+
+    def push_err_code(self, msg):
+        current_time = time.strftime("%H:%M:%S", time.localtime())
+        msg = '%s--%s' % (current_time, msg)
+        self.widget.signal_add_log.emit(self.cookies, msg, 8)
+
+    def push_order_code(self, msg):
+        self.widget.signal_add_log.emit(self.cookies, msg, 4)
 
     def request_seckill_url(self):
         """访问商品的抢购链接（用于设置cookie等"""
@@ -238,6 +269,7 @@ class JdSeckill(object):
         logger.info(user_name)
         self.push_log(user_name)
         self.timers = Timer(self.buy_time)
+        self.push_log('正在等待到达设定时间:%s' % self.buy_time)
         self.timers.start()
         self.seckill_url[self.sku_id] = self.get_seckill_url()
         logger.info('访问商品的抢购连接...')
@@ -247,6 +279,9 @@ class JdSeckill(object):
             'Host': 'marathon.jd.com',
             'Referer': 'https://item.jd.com/{}.html'.format(self.sku_id),
         }
+        if not self.seckill_url.get(self.sku_id):
+            self.push_log('未获取商品的抢购连接...')
+            return
         self.session.get(
             url=self.seckill_url.get(
                 self.sku_id),
@@ -301,6 +336,8 @@ class JdSeckill(object):
         # 获取用户秒杀初始化信息
         self.seckill_init_info[self.sku_id] = self._get_seckill_init_info()
         init_info = self.seckill_init_info.get(self.sku_id)
+        if not init_info:
+            return
         default_address = init_info['addressList'][0]  # 默认地址dict
         invoice_info = init_info.get('invoiceInfo', {})  # 默认发票信息dict, 有可能不返回
         token = init_info['token']
@@ -375,7 +412,7 @@ class JdSeckill(object):
         # {'errorMessage': '系统正在开小差，请重试~~', 'orderId': 0, 'resultCode': 90013, 'skuId': 0, 'success': False}
         # 抢购成功：
         # {"appUrl":"xxxxx","orderId":820227xxxxx,"pcUrl":"xxxxx","resultCode":0,"skuId":0,"success":true,"totalMoney":"xxxxx"}
-        if resp_json.get('success'):
+        if resp_json and resp_json.get('success'):
             order_id = resp_json.get('orderId')
             total_money = resp_json.get('totalMoney')
             pay_url = 'https:' + resp_json.get('pcUrl')
@@ -383,13 +420,14 @@ class JdSeckill(object):
                 '抢购成功，订单号:{}, 总价:{}, 电脑端付款链接:{}'.format(order_id, total_money, pay_url)
             )
             success_message = "抢购成功，订单号:{}, 总价:{}, 电脑端付款链接:{}".format(order_id, total_money, pay_url)
-            self.push_log(success_message)
+            self.push_order_code(str(order_id))
             send_email(success_message)
             return True
         else:
-            err_msg = '抢购失败，返回信息:{}'.format(resp_json)
-            logger.info(err_msg)
+            err_msg = '抢购失败，返回信息:{}'.format(str(resp_json))
+            logger.error(err_msg)
             self.push_log(err_msg)
             error_message = '抢购失败，返回信息:{}'.format(resp_json)
-            send_email(error_message)
+            if resp_json and resp_json.get('resultCode'):
+                self.push_err_code(resp_json.get('resultCode'))
             return False
