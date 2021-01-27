@@ -3,6 +3,7 @@ import os
 import xlrd
 from PyQt5.QtCore import pyqtSignal, QDateTime
 from PyQt5.QtWidgets import *
+from PyQt5.QtGui import QIcon
 from jd_main_ui import *
 from register import *
 import threading
@@ -242,5 +243,6 @@ class MyWindow(QMainWindow, Ui_MainWindow):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     myWin = MyWindow()
+    myWin.setWindowIcon(QIcon('icon/京东-01.png'))
     myWin.show()
     sys.exit(app.exec_())
