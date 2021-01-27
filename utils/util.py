@@ -3,10 +3,12 @@ import random
 import requests
 import zmail
 from jd_logger import logger
-import sys
-import time
 import threading
+import platform
 
+system = platform.system()
+if system != 'Darwin':
+    import wmi
 
 
 
@@ -53,28 +55,29 @@ USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/537.14 (KHTML, like Gecko) Chrome/24.0.1292.0 Safari/537.14"
 ]
 
+
 class Job(threading.Thread):
 
     def __init__(self, *args, **kwargs):
         super(Job, self).__init__(*args, **kwargs)
-        self.__flag = threading.Event()   # 用于暂停线程的标识
-        self.__flag.set()    # 设置为True
-        self.__running = threading.Event()   # 用于停止线程的标识
-        self.__running.set()   # 将running设置为True
+        self.__flag = threading.Event()  # 用于暂停线程的标识
+        self.__flag.set()  # 设置为True
+        self.__running = threading.Event()  # 用于停止线程的标识
+        self.__running.set()  # 将running设置为True
 
     # def run(self):
     #     while self.__running.isSet():
     #         self.__flag.wait()   # 为True时立即返回, 为False时阻塞直到内部的标识位为True后返回
 
     def pause(self):
-        self.__flag.clear()   # 设置为False, 让线程阻塞
+        self.__flag.clear()  # 设置为False, 让线程阻塞
 
     def resume(self):
         self.__flag.set()  # 设置为True, 让线程停止阻塞
 
     def stop(self):
-        self.__flag.set()    # 将线程从暂停状态恢复, 如何已经暂停的话
-        self.__running.clear()    # 设置为False
+        self.__flag.set()  # 将线程从暂停状态恢复, 如何已经暂停的话
+        self.__running.clear()  # 设置为False
 
 
 class Dict(dict):
@@ -84,7 +87,7 @@ class Dict(dict):
 
     def __setattr__(self, key, value):
         self[key] = value
-        
+
 
 def parse_json(s):
     try:
@@ -108,12 +111,6 @@ def get_cookies(cookies):
 
     manual_cookies = {}
     cookie_string = cookies
-    if len(cookie_string) < 3:
-        cookie_string = get_local_cookie()
-        if not cookie_string:
-            logger.error('没有可用cookies')
-            sys.exit(1)
-
     for item in cookie_string.split(';'):
         name, value = item.strip().split('=', 1)
         # 用=号分割，分割1次
@@ -141,22 +138,25 @@ def get_session(cookies):
 def send_email(message):
     """推送信息到微信"""
     server = zmail.server('516833759@qq.com', 'pqebqgebkfbnbija')
-    server.send_mail('516833759@qq.com', {'subject': '京东抢购结果', 'content_text': message})
+    server.send_mail('516833759@qq.com', {'subject': '京东抢购软件通知', 'content_text': message})
 
 
-def get_local_cookie(in_file='./cookies/等待登录的用户', out_file='./cookies/登录完成的用户'):
-    with open(in_file,mode='r') as f:
-        cookie_string = f.readline()
-        rest = f.readlines()
-        if not cookie_string:
-            return False
-    with open(out_file,mode='a+') as f:
-        current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-        f.write(current_time+"------"+cookie_string)
-    with open(in_file,mode='w') as f:
-        f.writelines(rest)
-    return cookie_string
+class Register:
+    def __init__(self):
+        self._get_device_info()
+
+    def _get_device_info(self):
+        c = wmi.WMI()
+        for physical_disk in c.Win32_DiskDrive():
+            print(physical_disk.SerialNumber)
+
+    def register(self):
+        pass
+
+    def _make_secret(self):
+        pass
 
 
 if __name__ == '__main__':
-    print(get_local_cookie())
+    # register = Register()
+    print(platform.system())
