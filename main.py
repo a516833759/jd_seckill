@@ -74,6 +74,8 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         QMessageBox.about(self, '提示', '保存成功')
 
     def load_config(self):
+        if not os.path.exists('./conf'):
+            return
         with open('./conf', mode='r') as f:
             s = f.read()
             if s:
