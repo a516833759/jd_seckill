@@ -242,7 +242,7 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(_translate("MainWindow", "京东茅台抢购"))
         self.radioButton_6.setText(_translate("MainWindow", "网页登录"))
         self.radioButton_4.setText(_translate("MainWindow", "软件登陆"))
-        self.pushButton.setText(_translate("MainWindow", "京东ck提取"))
+        self.pushButton.setText(_translate("MainWindow", "手动添加账号"))
         self.radioButton.setText(_translate("MainWindow", "电脑"))
         self.radioButton_2.setText(_translate("MainWindow", "APP"))
         self.pushButton_2.setText(_translate("MainWindow", "说明"))
