@@ -6,6 +6,10 @@ from jd_logger import logger
 import threading
 import platform
 import hashlib
+from selenium import webdriver
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
 
 system = platform.system()
 if system != 'Darwin':
@@ -109,8 +113,9 @@ def get_cookies(cookies):
     """解析cookies内容并添加到cookiesJar"""
 
     manual_cookies = {}
-    cookie_string = cookies
+    cookie_string = cookies.strip(';')
     for item in cookie_string.split(';'):
+        print(item)
         name, value = item.strip().split('=', 1)
         # 用=号分割，分割1次
         manual_cookies[name] = value
@@ -152,18 +157,53 @@ class Register:
         key = hashlib.md5(serial_number.encode(encoding='UTF-8')).hexdigest()
         return key
 
-    def register(self, key,secret):
+    def register(self, key, secret):
         md5 = hashlib.md5('6a9a5ba51e2d014bd678f866ee467fd6'.encode(encoding='UTF-8'))
         md5.update(self.key.encode(encoding='UTF-8'))
         local_secret = md5.hexdigest()
         if secret == local_secret:
-            with open('./%s' % key,mode='w') as f:
+            with open('./%s' % key, mode='w') as f:
                 f.write(secret)
             return True
         return False
 
 
+def get_cookies_by_browser(widget,headless=False):
+    option = webdriver.ChromeOptions()
+    option.add_argument('disable-infobars')
+    if headless:
+        option.add_argument('headless')
+    option.add_experimental_option('excludeSwitches', ['enable-automation'])
+    browser = webdriver.Chrome(executable_path='./chromedriver', chrome_options=option)
+    browser.get('https://passport.jd.com/new/login.aspx?ReturnUrl=https%3A%2F%2Fwww.jd.com%2F%3Fcountry%3DUSA')
+    if headless and widget:
+        scan_img_xpath = '//*[@id="content"]/div[2]/div[1]/div/div[5]/div/div[2]/div[1]/img'
+        scan_img = browser.find_element_by_xpath(scan_img_xpath).get_attribute('src')
+        widget.signal_login_scan_code.emit('%s'%scan_img)
+    try:
+        locator = (By.XPATH, '//*[@id="shortcut"]/div/ul[2]/li[3]/div/a')
+        name_locator = (By.XPATH,'//*[@id="ttbar-login"]/div[1]/a')
+        WebDriverWait(browser, 20, 0.5).until(EC.presence_of_element_located(locator))
+        href = browser.find_element_by_xpath('//*[@id="shortcut"]/div/ul[2]/li[3]/div/a').get_attribute('href')
+        name = browser.find_element_by_xpath('//*[@id="ttbar-login"]/div[1]/a').text
+        print(name)
+        print(href)
+        browser.get(href)
+        cookies_list = browser.get_cookies()
+        cookies_str = ''
+        for cookies in cookies_list:
+            s = '%s=%s;' % (cookies.get('name'), cookies.get('value'))
+            cookies_str += s
+        print('cookies_str',cookies_str)
+        widget.signal_login_cookies.emit(cookies_str,name)
+    except Exception as e:
+        print(e)
+    finally:
+        browser.close()
+
+
 if __name__ == '__main__':
-    register = Register()
-    register.register('111')
+    # register = Register()
+    # register.register('111')
     # print(platform.system())
+    get_cookies_by_browser()
