@@ -183,7 +183,7 @@ def get_cookies_by_browser(widget,headless=False):
     try:
         locator = (By.XPATH, '//*[@id="shortcut"]/div/ul[2]/li[3]/div/a')
         name_locator = (By.XPATH,'//*[@id="ttbar-login"]/div[1]/a')
-        WebDriverWait(browser, 20, 0.5).until(EC.presence_of_element_located(locator))
+        WebDriverWait(browser, 200, 0.5).until(EC.presence_of_element_located(locator))
         href = browser.find_element_by_xpath('//*[@id="shortcut"]/div/ul[2]/li[3]/div/a').get_attribute('href')
         name = browser.find_element_by_xpath('//*[@id="ttbar-login"]/div[1]/a').text
         print(name)
