@@ -2,7 +2,7 @@ import sys
 import os
 import xlrd
 from PyQt5.QtCore import pyqtSignal, QDateTime, QUrl
-from PyQt5.QtWebEngineWidgets import QWebEngineView
+# from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QIcon, QPixmap
 from jd_main_ui import *
