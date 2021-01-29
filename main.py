@@ -3,8 +3,10 @@ import os
 import xlrd
 from PyQt5.QtCore import pyqtSignal, QDateTime, QUrl
 # from PyQt5.QtWebEngineWidgets import QWebEngineView
-from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QIcon, QPixmap
+from PyQt5.QtWidgets import QWidget, QMainWindow, QDialog, QTableWidgetItem, QMessageBox, QFileDialog, QApplication, \
+    QButtonGroup
+
 from jd_main_ui import *
 from register import *
 from sacn_login import Ui_Dialog as Login_Dialog
