@@ -1,5 +1,8 @@
 import json
 import random
+import re
+import time
+
 import requests
 import zmail
 from jd_logger import logger
@@ -93,10 +96,11 @@ class Dict(dict):
 
 
 def parse_json(s):
+    print('parse_json', s)
     try:
         begin = s.find('{')
         end = s.rfind('}') + 1
-        return json.loads(s[begin:end])
+        return Dict(json.loads(s[begin:end]))
     except Exception as e:
         logger.error(e)
         return
@@ -115,7 +119,6 @@ def get_cookies(cookies):
     manual_cookies = {}
     cookie_string = cookies.strip(';')
     for item in cookie_string.split(';'):
-        print(item)
         name, value = item.strip().split('=', 1)
         # 用=号分割，分割1次
         manual_cookies[name] = value
@@ -124,16 +127,21 @@ def get_cookies(cookies):
     return cookiesJar
 
 
+def get_jd_timestamp(sku_id, main_sku_id):
+    url = 'https://cd.jd.com/description/channel?skuId=%s&mainSkuId=%s&charset=utf-8&cdn=2&callback=showdesc' % (
+        sku_id, main_sku_id)
+    resp = requests.get(url).content
+    timestamp = re.search('\\d+', str(resp)).group()
+    now_time = lambda: int(round(time.time() * 1000))
+    return timestamp, now_time()
+
+
 def get_session(cookies):
     # 初始化session
     session = requests.session()
     session.headers = {"User-Agent": USER_AGENTS[0],
                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3",
                        "Connection": "keep-alive"}
-    checksession = requests.session()
-    checksession.headers = {"User-Agent": USER_AGENTS[0],
-                            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3",
-                            "Connection": "keep-alive"}
     # 获取cookies保存到session
     session.cookies = get_cookies(cookies)
     return session
@@ -141,7 +149,7 @@ def get_session(cookies):
 
 def send_email(message):
     """推送信息到微信"""
-    server = zmail.server('516833759@qq.com', 'pqebqgebkfbnbija')
+    server = zmail.server('ahackbase@163.com', 'VQZRGGTKUBCIUAVA')
     server.send_mail('516833759@qq.com', {'subject': '京东抢购软件通知', 'content_text': message})
 
 
@@ -168,7 +176,7 @@ class Register:
         return False
 
 
-def get_cookies_by_browser(widget,headless=False):
+def get_cookies_by_browser(widget, headless=False):
     option = webdriver.ChromeOptions()
     option.add_argument('disable-infobars')
     if headless:
@@ -179,10 +187,9 @@ def get_cookies_by_browser(widget,headless=False):
     if headless and widget:
         scan_img_xpath = '//*[@id="content"]/div[2]/div[1]/div/div[5]/div/div[2]/div[1]/img'
         scan_img = browser.find_element_by_xpath(scan_img_xpath).get_attribute('src')
-        widget.signal_login_scan_code.emit('%s'%scan_img)
+        widget.signal_login_scan_code.emit('%s' % scan_img)
     try:
         locator = (By.XPATH, '//*[@id="shortcut"]/div/ul[2]/li[3]/div/a')
-        name_locator = (By.XPATH,'//*[@id="ttbar-login"]/div[1]/a')
         WebDriverWait(browser, 200, 0.5).until(EC.presence_of_element_located(locator))
         href = browser.find_element_by_xpath('//*[@id="shortcut"]/div/ul[2]/li[3]/div/a').get_attribute('href')
         name = browser.find_element_by_xpath('//*[@id="ttbar-login"]/div[1]/a').text
@@ -194,8 +201,8 @@ def get_cookies_by_browser(widget,headless=False):
         for cookies in cookies_list:
             s = '%s=%s;' % (cookies.get('name'), cookies.get('value'))
             cookies_str += s
-        print('cookies_str',cookies_str)
-        widget.signal_login_cookies.emit(cookies_str,name)
+        print('cookies_str', cookies_str)
+        widget.signal_login_cookies.emit(cookies_str, name)
     except Exception as e:
         print(e)
     finally:
@@ -206,4 +213,7 @@ if __name__ == '__main__':
     # register = Register()
     # register.register('111')
     # print(platform.system())
-    get_cookies_by_browser()
+    # get_cookies_by_browser()
+    # send_email('nih')
+    a,b = get_jd_timestamp(100012043978,100012043978)
+    print(a,b)

@@ -1,10 +1,11 @@
+import json
 import random
 import sys
 import time
 from jd_logger import logger
 from timer import Timer
 import requests
-from utils.util import parse_json, get_session, send_email, USER_AGENTS
+from utils.util import parse_json, get_session, send_email, USER_AGENTS, Dict
 # from concurrent.futures import ProcessPoolExecutor
 from lxml import etree
 import threadpool
@@ -12,13 +13,13 @@ import threading
 
 
 class JdSeckill(threading.Thread):
-    def __init__(self, sku, sku_num, buy_time, cookies, widget,*args, **kwargs):
+    def __init__(self, sku, sku_num, buy_time, cookies, widget, *args, **kwargs):
         # 初始化信息
         super(JdSeckill, self).__init__(*args, **kwargs)
-        self.__flag = threading.Event()   # 用于暂停线程的标识
-        self.__flag.set()    # 设置为True
-        self.__running = threading.Event()   # 用于停止线程的标识
-        self.__running.set()   # 将running设置为True
+        self.__flag = threading.Event()  # 用于暂停线程的标识
+        self.__flag.set()  # 设置为True
+        self.__running = threading.Event()  # 用于停止线程的标识
+        self.__running.set()  # 将running设置为True
 
         self.session = get_session(cookies)
         self.sku_id = sku
@@ -31,15 +32,44 @@ class JdSeckill(threading.Thread):
         self.widget = widget
         self.cookies = cookies
 
+    def get_yuyue_info(self):
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 11_0_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.96 Safari/537.36',
+            'cookie': 'shshshfpa=85bcc8b7-a2cf-6331-6d20-1e9b7570bd07-1582600259; shshshfpb=85bcc8b7-a2cf-6331-6d20-1e9b7570bd07-1582600259; ipLocation=%u5317%u4eac; _base_=YKH2KDFHMOZBLCUV7NSRBWQUJPBI7JIMU5R3EFJ5UDHJ5LCU7R2NILKK5UJ6GLA2RGYT464UKXAI4Z6HPCTN4UQM3WHVQ4ENFP57OCZ5N2N2URBURR6MWC2MNWI5TCDLSCF555UOYV4EBYV2VFBXBYOERNZELA6E4S4L2GLWBLTAIW5N6ZGEONMNNA5DQRDPVL52KNRE2QP7OBV5ICKFL7IQOAG4MEKLVTSGRNGZJL5VKB43KA2SZT3SGK7LGDLE5SE3OZKBF32H4DADFQ2AL2NBKMPYN3AUVRGT3FGPXTDJ7MB2MUSZQMNOQ35UDUZ7IDFC7UCAGXMFSRTPEMNBD2OZDSSGZYQR5Q4YWI3JTXJWJPEGFXPFMTCFS2DG5VRCSYCGVYLKJLDUG; user-key=562cbefe-322e-419b-adf5-f93571000a23; pinId=QN1q7VZjGgbBJqKyyYWCow; pin=3248884568; unick=%E4%B8%9C%E4%BA%AC%E4%BC%9A%E5%91%98VIP; _tp=Cm4nrHC1g4CVdkf5st5g%2FQ%3D%3D; _pst=3248884568; __jdu=16119939521361622463629; areaId=1; __jdv=76161171%7Ciosapp%7Ct_335139774%7Cappshare%7CQqfriends%7C1612012344027; ceshi3.com=201; TrackID=1J-tNfRRfCG7I_y7bBcT7FUv1eQFSBV3Br6zsGgK9K-dBGivXIlpTCu2xUqVk6VtEe8vi2iDV_5qwEjeinJRssN_3gEEQEd8XJ2J64TN0d4xJxjhNn5Q-x0PzjvyPRtfQ; cn=14; ipLoc-djd=6-303-36780-56048.138527709; mt_xid=V2_52007VwMVUl1QWlgXTRpcB2ADFVFeXVVYGEoRbFEwA0YBXFsHRk1IGAgZYgcSWkELW1MYVU1fVTJXQVRVX1BSS3kaXQZnHxNRQVlSSx9JEl8FbAAaYl9oUmoXSRpfAGAEFFtVXVtYHk4YXQNhMxdTVF4%3D; __jda=122270672.16119939521361622463629.1611993952.1612155258.1612157208.9; __jdc=122270672; 3AB9D23F7A4B3C9B=CWWLN6K2UUYVALSZPHMSG6WQVSSTHJOATAOZK4CDGPADXGCNHG5MNBJZTOIJHAZJN42V7ORYOHAD6MCQCNCFDQSIVM; shshshfp=709a8342f21c895478343eab27de6449; shshshsID=39f53fe326c5f4cae35f0b23a1c5d80f_8_1612159356102; __jdb=122270672.9.16119939521361622463629|9.1612157208; thor=77F3250B9693C119CC90EB6BB73E1B2E4359907CA7AA269ACA99D31B927C158FD0E816CD55200594AA37DC94C73DD2C35FCAE06F4EC57B08F5E7BD8672771275A154B528F886C14D17BA326C8FEEFAE09A1B5135A9DF00FD6E63351F32CA0319F07016B9841C914C76AD4D9A638172F823F93E31F9B7E902C475E3D6DCBB7E17040615219B011520CDC2ABEF16A70BBC'
+        }
+        params = {
+            'callback': 'jQuery%s' % random.randint(1000000, 9999999),
+            'skuId': self.sku_id,
+            'cat': '12259,12260,9435',
+            'area': '6_303_36780_56048',
+            'shopId': '1000085463',
+            'venderId': '1000085463',
+            'paramJson': {"platform2": "1", "specialAttrStr": "p0pp1pppppppppppppppppp", "skuMarkStr": "00"}
+        }
+        resp = parse_json(self.session.get('https://item-soa.jd.com/getWareBusiness', headers=headers, params=params).text)
+        print('商品预约数据',resp)
+        info = Dict({
+            'buy_time': resp.yuyueInfo.get('buyTime')[:16],  # 2021-02-02 12:00-2021-02-02 12:30
+            'countdown': resp.yuyueInfo.get('countdown'),  # 倒计时s
+            'yuyueTime': resp.yuyueInfo.get('yuyueTime')[:16],  # "2021-02-02 10:00~2021-02-02 11:59"
+            'yuyue': resp.yuyueInfo.get('yuyue')  # 是否预约 True
+        })
+        self.widget.signal_yuyue_info.emit(json.dumps(info))
+        if info.yuyue:
+            self.widget.signal_login.emit(self.cookies, '已经预约', 0)
+        else:
+            self.widget.signal_login.emit(self.cookies, '未预约', 0)
+
+
     def pause(self):
-        self.__flag.clear()   # 设置为False, 让线程阻塞
+        self.__flag.clear()  # 设置为False, 让线程阻塞
 
     def resume(self):
         self.__flag.set()  # 设置为True, 让线程停止阻塞
 
     def stop(self):
-        self.__flag.set()    # 将线程从暂停状态恢复, 如何已经暂停的话
-        self.__running.clear()    # 设置为False
+        self.__flag.set()  # 将线程从暂停状态恢复, 如何已经暂停的话
+        self.__running.clear()  # 设置为False
 
     def reserve(self):
         """
@@ -268,7 +298,8 @@ class JdSeckill(threading.Thread):
 
         logger.info(user_name)
         self.push_log(user_name)
-        self.timers = Timer(self.buy_time)
+        # self.timers = Timer(self.buy_time)
+
         self.push_log('正在等待到达设定时间:%s' % self.buy_time)
         self.timers.start()
         self.seckill_url[self.sku_id] = self.get_seckill_url()
@@ -371,8 +402,8 @@ class JdSeckill(threading.Thread):
             'areaCode': '',
             'overseas': 0,
             'phone': '',
-            'eid': 'XMKWG35OFYBQN3C5JYD7J4FNOWNXSGBIZNIKBUVVQEMJW6766KKTNYZD43U3Y7VCWA73EEWJRCOTKU7QVG3WKUNNQA',
-            'fp': '2ea01d1acb70ab62c8607786d7273205',
+            'eid': 'A3O455IQ4JLN4EUPIZTI4DZKMSDWCPY4VNJHXVAOU4NLKWSGNO6NDN53TO7RRPVDJVTELS4ZPMWANTKAULVGL7A3B4',
+            'fp': 'ffa84dac986b8570d2d4ec69dcda19db',
             'token': token,
             'pru': ''
         }
