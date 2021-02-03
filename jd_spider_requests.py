@@ -295,15 +295,9 @@ class JdSeckill(threading.Thread):
         user_name = '用户:{}'.format(self.get_username())
         title = '商品名称:{}'.format(self.get_sku_title())
         logger.info(title)
-
         logger.info(user_name)
         self.push_log(user_name)
-        # self.timers = Timer(self.buy_time)
-
-        self.push_log('正在等待到达设定时间:%s' % self.buy_time)
-        self.timers.start()
         self.seckill_url[self.sku_id] = self.get_seckill_url()
-        logger.info('访问商品的抢购连接...')
         self.push_log('访问商品的抢购连接...')
         headers = {
             'User-Agent': self.default_user_agent,
