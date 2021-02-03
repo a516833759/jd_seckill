@@ -182,7 +182,7 @@ def get_cookies_by_browser(widget, headless=False):
     if headless:
         option.add_argument('headless')
     option.add_experimental_option('excludeSwitches', ['enable-automation'])
-    browser = webdriver.Chrome(executable_path='./chromedriver' if system != 'Darwin' else './chromedriver.exe', chrome_options=option)
+    browser = webdriver.Chrome(executable_path='./chromedriver' if system == 'Darwin' else './chromedriver.exe', chrome_options=option)
     browser.get('https://passport.jd.com/new/login.aspx?ReturnUrl=https%3A%2F%2Fwww.jd.com%2F%3Fcountry%3DUSA')
     if headless and widget:
         scan_img_xpath = '//*[@id="content"]/div[2]/div[1]/div/div[5]/div/div[2]/div[1]/img'
